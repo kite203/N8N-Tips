@@ -1,0 +1,12 @@
+services:
+  static-verify:
+    image: nginx:alpine
+    restart: always
+    volumes:
+    - ./verification:/usr/share/nginx/html:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.verify.rule=Host(`replace_with_your_domain`) && Path(`/verifyxxx.html`)
+      - traefik.http.routers.verify.entrypoints=web,websecure
+      - traefik.http.routers.verify.tls=true
+      - traefik.http.routers.verify.tls.certresolver=mytlschallenge
