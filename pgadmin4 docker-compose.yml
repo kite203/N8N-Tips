@@ -1,0 +1,39 @@
+services:
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: always
+    environment:
+      SCRIPT_NAME: /pgadmin
+      PGADMIN_DEFAULT_EMAIL: replace_with_your_email
+      PGADMIN_DEFAULT_PASSWORD: "replace_with_your_password"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.pgadmin.loadbalancer.server.port=80
+
+      # --- ROUTER 1: Main router for all /pgadmin/* traffic ---
+      # This handles all requests once they have the correct path.
+      - traefik.http.routers.pgadmin-main.rule=Host(`replace_with_your_domain`) && PathPrefix(`/pgadmin`)
+      - traefik.http.routers.pgadmin-main.entrypoints=websecure
+      - traefik.http.routers.pgadmin-main.tls.certresolver=mytlschallenge
+
+      # --- ROUTER 2: Redirect router for the missing slash ---
+      # This router has a higher priority and a more specific rule to catch requests for the bare /pgadmin path.
+      - traefik.http.routers.pgadmin-redirect.priority=99
+      - traefik.http.routers.pgadmin-redirect.rule=Host(`replace_with_your_domain`) && Path(`/pgadmin`)
+      - traefik.http.routers.pgadmin-redirect.entrypoints=websecure
+      - traefik.http.routers.pgadmin-redirect.tls.certresolver=mytlschallenge
+      - traefik.http.routers.pgadmin-redirect.middlewares=add-slash" # Apply the redirect middleware
+
+      # --- MIDDLEWARE DEFINITION ---
+      # Defines a middleware named "add-slash" that permanently redirects by adding a trailing slash.
+      - traefik.http.middlewares.add-slash.redirectregex.regex=^https?://([^/]+)/pgadmin$$
+      - traefik.http.middlewares.add-slash.redirectregex.replacement=https://$${1}/pgadmin/
+      - traefik.http.middlewares.add-slash.redirectregex.permanent=true
+
+volumes:
+  pgadmin_data:
